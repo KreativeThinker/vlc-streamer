@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: vlc-streamer
+Version: 1.0
+Summary: A vlc based music engine
+Home-page: https://github.com/KreativeThinker/vlc-streamer
+Author: KreativeThinker
+Author-email: 
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+View github repp
+

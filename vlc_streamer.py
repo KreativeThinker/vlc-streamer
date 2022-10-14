@@ -25,12 +25,13 @@ class Search:
             "albums": None,
             "playlists": None
         }
-        self.api = ytm.YouTubeMusic()  # type: ignore
+        self.api = ytm.YouTubeMusic()
 
-    def search(self, query: str) -> dict:
+    def search(self, query: str, limit: int = 20) -> dict:
         """
         Search for songs, artists, albums and playlists
         :param query: str, keyword(s) for search.
+        :param limit: int, limit of results (20 default)
         :return: dict - songs, artists, albums and playlists
         """
         songs: dict = self.api.search_songs(query)
@@ -39,10 +40,10 @@ class Search:
         playlists: dict = self.api.search_playlists(query)
 
         results: dict = {
-            "songs": songs["items"],
-            "artists": artists["items"],
-            "albums": albums["items"],
-            "playlists": playlists["items"],
+            "songs": songs["items"][limit],
+            "artists": artists["items"][limit],
+            "albums": albums["items"][limit],
+            "playlists": playlists["items"][limit],
         }
 
         self.more["songs"] = songs["continuation"]
@@ -134,20 +135,27 @@ class MediaPlayer:
             artists=None,
             album=None,
             duration=None,
+            thumbnail=None,
             state=0
         )
         self.queue: list[dict] = []
         self.player = vlc.MediaPlayer()
 
-    # TODO: Remove default link. It is only for easy debugging.
-    def load_media(self, media_id: str = "U-zySoZ4GTA") -> None:
+    def load_media(self, media_data: dict) -> None:
         """
         Load media mrl to `self.player`
-        :param media_id: media id as searched by `Search.search(query)`
+        :param media_data: Media data [name, id, artists, album, duration, thumbnail]
         """
-        media = pafy.new(media_id).getbestaudio().url
+        self.stop()
+        self.current_media["name"] = media_data["name"]
+        self.current_media["id"] = media_data["id"]
+        self.current_media["artists"] = media_data["artists"]
+        self.current_media["album"] = media_data["album"]
+        self.current_media["duration"] = media_data["duration"]
+        self.current_media["thumbnail"] = media_data["thumbnail"]
+
+        media = pafy.new(media_data["id"]).getbestaudio().url
         self.player.set_mrl(media)
-        self.current_media["state"] = 0
 
     def play(self) -> None:
         """
@@ -156,7 +164,7 @@ class MediaPlayer:
         self.player.play()
         self.current_media["state"] = 1
 
-    def pause(self, pause_callback: Callable = print) -> None:
+    def pause(self, pause_callback: Callable) -> None:
         """
         Pause/Play the media
         :param pause_callback: function, called whenever media is paused/played
@@ -164,6 +172,42 @@ class MediaPlayer:
         self.player.pause()
         self.current_media["state"] *= -1
         pause_callback(self.current_media["state"])
+
+    def stop(self) -> None:
+        """
+        Stops currently playing media (if any)
+        :return: None
+        """
+
+        self.player.stop()
+        self.queue: list[dict] = []
+        self.current_media["state"]: int = 0
+
+    def next(self) -> None:
+        """
+        Plays next song (if any)
+        :return: None
+        """
+        if len(self.queue) > 0:
+            self.stop()
+            self.load_media(self.queue.pop(0))
+
+        else:
+            self.stop()
+
+    def check_ended(self) -> float:
+        """
+        Checks if the song has ended.
+        If song has ended, plays the next song in queue
+        If no song in queue then player is made idle.
+        :return: Percentage of music completed
+        """
+        while True:
+            if self.player.get_state() == vlc.State.Ended:
+                self.current_media["state"] = 0
+                if len(self.queue) > 0:
+                    pprint(self.queue[0])
+            return self.player.get_position()
 
         # TODO: Create the following functions:-
         #     1.    stop() --- stop all media including queue
@@ -173,6 +217,7 @@ class MediaPlayer:
         #     5.    view_queue() --- return list of queued media
         #     6.    download_media() --- downloads selected/current media
         #     7.    media_fetch_data() --- returns metadata
+        #     8.    check_ended --- checks if the song has ended
 
 
 if __name__ == "__main__":
@@ -192,7 +237,8 @@ if __name__ == "__main__":
 
         if i == 1:
             s = input("Query: ")
-            pprint(v.search(s))
+            i = int(input("Limit: "))
+            pprint(v.search(s, i))
 
         elif i == 2:
             pprint(v.more_songs())

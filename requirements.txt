@@ -1,0 +1,4 @@
+typing
+python-vlc
+ytm @ git+https://github.com/tombulled/python-youtube-music.git
+pafy @ git+https://github.com/mps-youtube/pafy
